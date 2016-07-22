@@ -2354,6 +2354,8 @@ int commander_thread_main(int argc, char *argv[])
 			    	internal_state.main_state == commander_state_s::MAIN_STATE_ACRO ||
 			    	internal_state.main_state == commander_state_s::MAIN_STATE_STAB ||
 			    	internal_state.main_state == commander_state_s::MAIN_STATE_RATTITUDE ||
+			    	internal_state.main_state == commander_state_s::MAIN_STATE_POSCTL ||
+			    	internal_state.main_state == commander_state_s::MAIN_STATE_ALTCTL ||
 			    	land_detector.landed) &&
 			    sp_man.r < -STICK_ON_OFF_LIMIT && sp_man.z < 0.1f) {
 
@@ -2397,6 +2399,8 @@ int commander_thread_main(int argc, char *argv[])
 					if ((internal_state.main_state != commander_state_s::MAIN_STATE_MANUAL)
 						&& (internal_state.main_state != commander_state_s::MAIN_STATE_ACRO)
 						&& (internal_state.main_state != commander_state_s::MAIN_STATE_STAB)
+						&& (internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE)
+						&& (internal_state.main_state != commander_state_s::MAIN_STATE_POSCTL)
 						&& (internal_state.main_state != commander_state_s::MAIN_STATE_ALTCTL)) {
 						print_reject_arm("NOT ARMING: Switch to a manual mode first.");
 

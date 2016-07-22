@@ -884,7 +884,7 @@ int preflight_check(struct vehicle_status_s *status, orb_advert_t *mavlink_log_p
 				!status_flags->circuit_breaker_engaged_gpsfailure_check, true, reportFailures);
 
 	if (!status_flags->cb_usb && status_flags->usb_connected && prearm) {
-		preflight_ok = false;
+		//preflight_ok = false;
 		if (reportFailures) {
 			mavlink_and_console_log_critical(mavlink_log_pub, "ARMING DENIED: Flying with USB is not safe");
 		}
