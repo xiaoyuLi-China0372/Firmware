@@ -292,6 +292,7 @@ private:
 		int rc_map_aux3;
 		int rc_map_aux4;
 		int rc_map_aux5;
+		int rc_map_speed_sw;
 
 		int rc_map_param[rc_parameter_map_s::RC_PARAM_MAP_NCHAN];
 
@@ -307,6 +308,8 @@ private:
 		float rc_acro_th;
 		float rc_offboard_th;
 		float rc_killswitch_th;
+		float rc_speed_4_th;
+		float rc_speed_6_th;
 		bool rc_assist_inv;
 		bool rc_auto_inv;
 		bool rc_rattitude_inv;
@@ -316,6 +319,8 @@ private:
 		bool rc_acro_inv;
 		bool rc_offboard_inv;
 		bool rc_killswitch_inv;
+		bool rc_speed_4_inv;
+		bool rc_speed_6_inv;
 
 		float battery_voltage_scaling;
 		float battery_current_scaling;
@@ -357,6 +362,7 @@ private:
 		param_t rc_map_aux3;
 		param_t rc_map_aux4;
 		param_t rc_map_aux5;
+		param_t rc_map_speed_sw;
 
 		param_t rc_map_param[rc_parameter_map_s::RC_PARAM_MAP_NCHAN];
 		param_t rc_param[rc_parameter_map_s::RC_PARAM_MAP_NCHAN];	/**< param handles for the parameters which are bound
@@ -376,6 +382,8 @@ private:
 		param_t rc_acro_th;
 		param_t rc_offboard_th;
 		param_t rc_killswitch_th;
+		param_t rc_speed_4_th;
+		param_t rc_speed_6_th;
 
 		param_t battery_voltage_scaling;
 		param_t battery_current_scaling;
@@ -620,7 +628,7 @@ Sensors::Sensors() :
 	_parameter_handles.rc_map_aux3 = param_find("RC_MAP_AUX3");
 	_parameter_handles.rc_map_aux4 = param_find("RC_MAP_AUX4");
 	_parameter_handles.rc_map_aux5 = param_find("RC_MAP_AUX5");
-
+    _parameter_handles.rc_map_speed_sw = param_find("RC_MAP_SPEED_SW");
 	/* RC to parameter mapping for changing parameters with RC */
 	for (int i = 0; i < rc_parameter_map_s::RC_PARAM_MAP_NCHAN; i++) {
 		char name[rc_parameter_map_s::PARAM_ID_LEN];
@@ -642,6 +650,8 @@ Sensors::Sensors() :
 	_parameter_handles.rc_acro_th = param_find("RC_ACRO_TH");
 	_parameter_handles.rc_offboard_th = param_find("RC_OFFB_TH");
 	_parameter_handles.rc_killswitch_th = param_find("RC_KILLSWITCH_TH");
+	_parameter_handles.rc_speed_4_th = param_find("RC_SPEED_4_TH");
+	_parameter_handles.rc_speed_6_th = param_find("RC_SPEED_6_TH");
 
 	/* Differential pressure offset */
 	_parameter_handles.diff_pres_offset_pa = param_find("SENS_DPRES_OFF");
@@ -812,6 +822,10 @@ Sensors::parameters_update()
 		warnx("%s", paramerr);
 	}
 
+    if (param_get(_parameter_handles.rc_map_speed_sw, &(_parameters.rc_map_speed_sw)) != OK) {
+        warnx("%s", paramerr);
+    }
+
 	param_get(_parameter_handles.rc_map_aux1, &(_parameters.rc_map_aux1));
 	param_get(_parameter_handles.rc_map_aux2, &(_parameters.rc_map_aux2));
 	param_get(_parameter_handles.rc_map_aux3, &(_parameters.rc_map_aux3));
@@ -852,6 +866,12 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.rc_killswitch_th, &(_parameters.rc_killswitch_th));
 	_parameters.rc_killswitch_inv = (_parameters.rc_killswitch_th < 0);
 	_parameters.rc_killswitch_th = fabs(_parameters.rc_killswitch_th);
+	param_get(_parameter_handles.rc_speed_4_th, &(_parameters.rc_speed_4_th));
+	_parameters.rc_speed_4_inv = (_parameters.rc_speed_4_th < 0);
+	_parameters.rc_speed_4_th = fabs(_parameters.rc_speed_4_th);
+	param_get(_parameter_handles.rc_speed_6_th, &(_parameters.rc_speed_6_th));
+	_parameters.rc_speed_6_inv = (_parameters.rc_speed_6_th < 0);
+	_parameters.rc_speed_6_th = fabs(_parameters.rc_speed_6_th);
 
 	/* update RC function mappings */
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_THROTTLE] = _parameters.rc_map_throttle - 1;
@@ -875,6 +895,7 @@ Sensors::parameters_update()
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_AUX_3] = _parameters.rc_map_aux3 - 1;
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_AUX_4] = _parameters.rc_map_aux4 - 1;
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_AUX_5] = _parameters.rc_map_aux5 - 1;
+	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_SPEED] = _parameters.rc_map_speed_sw - 1;
 
 	for (int i = 0; i < rc_parameter_map_s::RC_PARAM_MAP_NCHAN; i++) {
 		_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_PARAM_1 + i] = _parameters.rc_map_param[i] - 1;
@@ -1987,6 +2008,8 @@ Sensors::rc_poll()
 						 _parameters.rc_offboard_th, _parameters.rc_offboard_inv);
 			manual.kill_switch = get_rc_sw2pos_position(rc_channels_s::RC_CHANNELS_FUNCTION_KILLSWITCH,
 					     _parameters.rc_killswitch_th, _parameters.rc_killswitch_inv);
+			manual.speed_switch = get_rc_sw3pos_position(rc_channels_s::RC_CHANNELS_FUNCTION_SPEED, _parameters.rc_speed_6_th,
+					     _parameters.rc_speed_6_inv, _parameters.rc_speed_4_th, _parameters.rc_speed_4_inv);
 
 			/* publish manual_control_setpoint topic */
 			if (_manual_control_pub != nullptr) {
