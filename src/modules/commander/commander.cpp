@@ -263,7 +263,7 @@ void get_circuit_breaker_params();
 
 void check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool *valid_out, bool *changed);
 
-transition_result_t set_main_state_rc(struct vehicle_status_s *status);
+transition_result_t set_main_state_rc(struct vehicle_status_s *status, bool landed);
 
 void set_horizon_speed();
 
@@ -2467,7 +2467,7 @@ int commander_thread_main(int argc, char *argv[])
 
 			/* evaluate the main state machine according to mode switches */
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
-			transition_result_t main_res = set_main_state_rc(&status);
+			transition_result_t main_res = set_main_state_rc(&status, land_detector.landed);
 
 			/* play tune on mode change only if armed, blink LED always */
 			if (main_res == TRANSITION_CHANGED || first_rc_eval) {
@@ -2605,14 +2605,14 @@ int commander_thread_main(int argc, char *argv[])
 
 		/* reset main state after takeoff has completed */
 		/* only switch back to posctl */
-		if (main_state_prev == commander_state_s::MAIN_STATE_POSCTL) {
+		//if (main_state_prev == commander_state_s::MAIN_STATE_POSCTL) {
 
-			if (internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_TAKEOFF
-					&& mission_result.finished) {
+		//	if (internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_TAKEOFF
+		//			&& mission_result.finished) {
 
-				main_state_transition(&status, main_state_prev, main_state_prev, &status_flags, &internal_state);
-			}
-		}
+		//		main_state_transition(&status, main_state_prev, main_state_prev, &status_flags, &internal_state);
+		//	}
+		//}
 
 		/* handle commands last, as the system needs to be updated to handle them */
 		orb_check(cmd_sub, &updated);
@@ -2976,7 +2976,7 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 }
 
 transition_result_t
-set_main_state_rc(struct vehicle_status_s *status_local)
+set_main_state_rc(struct vehicle_status_s *status_local, bool landed)
 {
 	/* set main state according to RC switches */
 	transition_result_t res = TRANSITION_DENIED;
@@ -2997,6 +2997,7 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 		 (_last_sp_man.rattitude_switch == sp_man.rattitude_switch) &&
 		 (_last_sp_man.posctl_switch == sp_man.posctl_switch) &&
 		 (_last_sp_man.loiter_switch == sp_man.loiter_switch) &&
+		 (_last_sp_man.takeoff_land == sp_man.takeoff_land) &&
 		 (_last_sp_man.mode_slot == sp_man.mode_slot))) {
 
 		// update these fields for the geofence system
@@ -3012,6 +3013,41 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 		/* no timestamp change or no switch change -> nothing changed */
 		return TRANSITION_NOT_CHANGED;
 	}
+
+    /* check one-key takeoff and land switch */
+    if (_last_sp_man.takeoff_land != sp_man.takeoff_land) {
+        switch (sp_man.takeoff_land) {
+        case manual_control_setpoint_s::SWITCH_POS_OFF:	// one-key takeoff
+            if (landed) {
+                res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_TAKEOFF, main_state_prev, &status_flags, &internal_state);
+            }
+            if (res == TRANSITION_DENIED) {
+                print_reject_mode(status_local, "ONE-KEY TAKEOFF");
+                res = TRANSITION_NOT_CHANGED;
+            }
+            break;
+        case manual_control_setpoint_s::SWITCH_POS_MIDDLE:	// none
+            res = TRANSITION_DENIED;
+            break;
+        case manual_control_setpoint_s::SWITCH_POS_ON:	// one-key land
+            if (!landed) {
+                res = main_state_transition(status_local, commander_state_s::MAIN_STATE_AUTO_LAND, main_state_prev, &status_flags, &internal_state);
+            }
+            if (res == TRANSITION_DENIED) {
+                print_reject_mode(status_local, "ONE-KEY LAND");
+                res = TRANSITION_NOT_CHANGED;
+            }
+            break;
+        default:
+            res = TRANSITION_NOT_CHANGED;
+            break;
+        }
+        _last_sp_man.takeoff_land = sp_man.takeoff_land;
+        if (res != TRANSITION_DENIED) {
+            return res;
+        }
+        /* mode none, continue to evaluate the main system mode */
+    }
 
 	_last_sp_man = sp_man;
 
