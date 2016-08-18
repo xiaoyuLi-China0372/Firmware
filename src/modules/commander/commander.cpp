@@ -161,6 +161,7 @@ static constexpr uint8_t COMMANDER_MAX_GPS_NOISE = 60;		/**< Maximum percentage 
 
 #define HIL_ID_MIN 1000
 #define HIL_ID_MAX 1999
+#define TILT_COS_MAX   0.7f
 
 enum MAV_MODE_FLAG {
 	MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1, /* 0b00000001 Reserved for future use. | */
@@ -1908,6 +1909,12 @@ int commander_thread_main(int argc, char *argv[])
 		if (updated) {
 			/* position changed */
 			orb_copy(ORB_ID(vehicle_attitude), attitude_sub, &attitude);
+            /* disarm when titl > 45 deg on POSCTL and land*/
+            //if (attitude.R[8] < TILT_COS_MAX &&
+            //    (internal_state.main_state == commander_state_s::MAIN_STATE_POSCTL ||
+            //     internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND)) {
+            //    arm_disarm(false, &mavlink_log_pub, "tilt > 45 deg");
+            //}
 		}
 
 		//update condition_global_position_valid
@@ -2980,7 +2987,16 @@ set_main_state_rc(struct vehicle_status_s *status_local, bool landed)
 {
 	/* set main state according to RC switches */
 	transition_result_t res = TRANSITION_DENIED;
+    bool pos_valid_changed = false;
+    static bool prev_local_position_valid;
+    static bool prev_global_position_valid;
 
+    if (prev_local_position_valid != status_flags.condition_local_position_valid ||
+        prev_global_position_valid != status_flags.condition_global_position_valid) {
+        pos_valid_changed = true;
+        prev_local_position_valid = status_flags.condition_local_position_valid;
+        prev_global_position_valid = status_flags.condition_global_position_valid;
+    }
 	// XXX this should not be necessary any more, we should be able to
 	// just delete this and respond to mode switches
 	/* if offboard is set already by a mavlink command, abort */
@@ -3010,8 +3026,10 @@ set_main_state_rc(struct vehicle_status_s *status_local, bool landed)
 			_last_sp_man.r = sp_man.r;
 		}
 
-		/* no timestamp change or no switch change -> nothing changed */
-		return TRANSITION_NOT_CHANGED;
+        if (!pos_valid_changed) {
+            /* no timestamp change or no switch change -> nothing changed */
+            return TRANSITION_NOT_CHANGED;
+        }
 	}
 
     /* check one-key takeoff and land switch */
