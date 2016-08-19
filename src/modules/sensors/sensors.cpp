@@ -299,6 +299,7 @@ private:
 		int rc_map_aux5;
 		int rc_map_speed_sw;
 		int rc_map_takeoff_land;
+		int rc_map_mag_decl_c;
 
 		int rc_map_param[rc_parameter_map_s::RC_PARAM_MAP_NCHAN];
 
@@ -318,6 +319,7 @@ private:
 		float rc_speed_6_th;
 		float rc_takeoff_th;
 		float rc_land_th;
+		float mag_decl_c_cale;
 		bool rc_assist_inv;
 		bool rc_auto_inv;
 		bool rc_rattitude_inv;
@@ -374,6 +376,8 @@ private:
 		param_t rc_map_aux5;
 		param_t rc_map_speed_sw;
 		param_t rc_map_takeoff_land;
+		param_t rc_map_mag_decl_c;
+        param_t mag_decl_c_cale;
 
 		param_t rc_map_param[rc_parameter_map_s::RC_PARAM_MAP_NCHAN];
 		param_t rc_param[rc_parameter_map_s::RC_PARAM_MAP_NCHAN];	/**< param handles for the parameters which are bound
@@ -643,6 +647,8 @@ Sensors::Sensors() :
 	_parameter_handles.rc_map_aux5 = param_find("RC_MAP_AUX5");
     _parameter_handles.rc_map_speed_sw = param_find("RC_MAP_SPEED_SW");
     _parameter_handles.rc_map_takeoff_land = param_find("RC_MAP_ONE_KEY");
+    _parameter_handles.rc_map_mag_decl_c = param_find("RC_MAP_MAG_DEC_C");
+    _parameter_handles.mag_decl_c_cale = param_find("MAG_DEC_C_SCALE");
 	/* RC to parameter mapping for changing parameters with RC */
 	for (int i = 0; i < rc_parameter_map_s::RC_PARAM_MAP_NCHAN; i++) {
 		char name[rc_parameter_map_s::PARAM_ID_LEN];
@@ -846,6 +852,12 @@ Sensors::parameters_update()
         warnx("%s", paramerr);
     }
 
+    if (param_get(_parameter_handles.rc_map_mag_decl_c, &(_parameters.rc_map_mag_decl_c)) != OK) {
+        warnx("%s", paramerr);
+    }
+
+	param_get(_parameter_handles.mag_decl_c_cale, &(_parameters.mag_decl_c_cale));
+
 	param_get(_parameter_handles.rc_map_aux1, &(_parameters.rc_map_aux1));
 	param_get(_parameter_handles.rc_map_aux2, &(_parameters.rc_map_aux2));
 	param_get(_parameter_handles.rc_map_aux3, &(_parameters.rc_map_aux3));
@@ -923,6 +935,7 @@ Sensors::parameters_update()
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_AUX_5] = _parameters.rc_map_aux5 - 1;
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_SPEED] = _parameters.rc_map_speed_sw - 1;
 	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_TAKEOFF_LAND] = _parameters.rc_map_takeoff_land - 1;
+	_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_MAG_DEC_C] = _parameters.rc_map_mag_decl_c - 1;
 
 	for (int i = 0; i < rc_parameter_map_s::RC_PARAM_MAP_NCHAN; i++) {
 		_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_PARAM_1 + i] = _parameters.rc_map_param[i] - 1;
@@ -1835,6 +1848,9 @@ void
 Sensors::set_params_from_rc()
 {
     uint8_t speed_switch = 0;	//max horizonal speed 3 position switch (mandatory): 2m/s, 4m/s, 6m/s
+	float rc_val = 0.0f;
+	float param_val = 0.0f;
+    static float last_mag_c_val = 0.0f;
 	for (int i = 0; i < rc_parameter_map_s::RC_PARAM_MAP_NCHAN; i++) {
 		if (_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_PARAM_1 + i] < 0 || !_rc_parameter_map.valid[i]) {
 			/* This RC channel is not mapped to a RC-Parameter Channel (e.g. RC_MAP_PARAM1 == 0)
@@ -1843,13 +1859,13 @@ Sensors::set_params_from_rc()
 			continue;
 		}
 
-		float rc_val = get_rc_value((rc_channels_s::RC_CHANNELS_FUNCTION_PARAM_1 + i), -1.0, 1.0);
+		rc_val = get_rc_value((rc_channels_s::RC_CHANNELS_FUNCTION_PARAM_1 + i), -1.0, 1.0);
 
 		/* Check if the value has changed,
 		 * maybe we need to introduce a more aggressive limit here */
 		if (rc_val > _param_rc_values[i] + FLT_EPSILON || rc_val < _param_rc_values[i] - FLT_EPSILON) {
 			_param_rc_values[i] = rc_val;
-			float param_val = math::constrain(
+			param_val = math::constrain(
 						  _rc_parameter_map.value0[i] + _rc_parameter_map.scale[i] * rc_val,
 						  _rc_parameter_map.value_min[i], _rc_parameter_map.value_max[i]);
 			param_set(_parameter_handles.rc_param[i], &param_val);
@@ -1859,6 +1875,17 @@ Sensors::set_params_from_rc()
 					     _parameters.rc_speed_6_inv, _parameters.rc_speed_4_th, _parameters.rc_speed_4_inv);
 	/* set 3 horizonal speed values according to speed switches */
     set_horizon_speed(speed_switch);
+	
+	/* set parameter "ATT_MAG_DECL_C" */
+	if (_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_MAG_DEC_C] >= 0) {
+        rc_val = get_rc_value(rc_channels_s::RC_CHANNELS_FUNCTION_MAG_DEC_C, -1.0, 1.0);
+        if (rc_val > last_mag_c_val + FLT_EPSILON || rc_val < last_mag_c_val - FLT_EPSILON) {
+            last_mag_c_val = rc_val;
+            param_t param = param_find_no_notification("ATT_MAG_DECL_C");
+            param_val = _parameters.mag_decl_c_cale * rc_val;
+	    	param_set(param, &param_val);
+        }
+    }
 }
 
 void Sensors::set_horizon_speed(uint8_t speed_sw)

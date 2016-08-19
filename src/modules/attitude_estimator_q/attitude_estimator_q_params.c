@@ -94,6 +94,19 @@ PARAM_DEFINE_FLOAT(ATT_W_GYRO_BIAS, 0.1f);
 PARAM_DEFINE_FLOAT(ATT_MAG_DECL, 0.0f);
 
 /**
+ * Magnetic declination compensate by manual, in degrees
+ *
+ * This parameter is not used in normal operation,
+ * except special magnetic influence.
+ *
+ * @group Attitude Q estimator
+ * @unit deg
+ * @decimal 2
+ */
+PARAM_DEFINE_FLOAT(ATT_MAG_DECL_C, 0.0f);
+
+
+/**
  * Enable automatic GPS based declination compensation
  *
  * @group Attitude Q estimator

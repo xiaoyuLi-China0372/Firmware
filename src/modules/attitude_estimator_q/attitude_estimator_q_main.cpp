@@ -136,6 +136,7 @@ private:
 		param_t	w_ext_hdg;
 		param_t	w_gyro_bias;
 		param_t	mag_decl;
+		param_t	mag_decl_compensate;
 		param_t	mag_decl_auto;
 		param_t	acc_comp;
 		param_t	bias_max;
@@ -148,6 +149,7 @@ private:
 	float		_w_ext_hdg = 0.0f;
 	float		_w_gyro_bias = 0.0f;
 	float		_mag_decl = 0.0f;
+	float	    _mag_decl_compensate = 0.0f;
 	bool		_mag_decl_auto = false;
 	bool		_acc_comp = false;
 	float		_bias_max = 0.0f;
@@ -227,6 +229,7 @@ AttitudeEstimatorQ::AttitudeEstimatorQ() :
 	_params_handles.w_ext_hdg	= param_find("ATT_W_EXT_HDG");
 	_params_handles.w_gyro_bias	= param_find("ATT_W_GYRO_BIAS");
 	_params_handles.mag_decl	= param_find("ATT_MAG_DECL");
+	_params_handles.mag_decl_compensate	= param_find("ATT_MAG_DECL_C");
 	_params_handles.mag_decl_auto	= param_find("ATT_MAG_DECL_A");
 	_params_handles.acc_comp	= param_find("ATT_ACC_COMP");
 	_params_handles.bias_max	= param_find("ATT_BIAS_MAX");
@@ -528,7 +531,7 @@ void AttitudeEstimatorQ::task_main()
 
 			if (_mag_decl_auto && _gpos.eph < 20.0f && hrt_elapsed_time(&_gpos.timestamp) < 1000000) {
 				/* set magnetic declination automatically */
-				update_mag_declination(math::radians(get_mag_declination(_gpos.lat, _gpos.lon)));
+				update_mag_declination(math::radians(get_mag_declination(_gpos.lat, _gpos.lon) + _mag_decl_compensate));
 			}
 		}
 
@@ -678,7 +681,8 @@ void AttitudeEstimatorQ::update_parameters(bool force)
 		param_get(_params_handles.w_gyro_bias, &_w_gyro_bias);
 		float mag_decl_deg = 0.0f;
 		param_get(_params_handles.mag_decl, &mag_decl_deg);
-		update_mag_declination(math::radians(mag_decl_deg));
+		param_get(_params_handles.mag_decl_compensate, &_mag_decl_compensate);
+		update_mag_declination(math::radians(mag_decl_deg + _mag_decl_compensate));
 		int32_t mag_decl_auto_int;
 		param_get(_params_handles.mag_decl_auto, &mag_decl_auto_int);
 		_mag_decl_auto = mag_decl_auto_int != 0;

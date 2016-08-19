@@ -1,4 +1,4 @@
-int32 RC_CHANNELS_FUNCTION_MAX=23
+int32 RC_CHANNELS_FUNCTION_MAX=24
 uint8 RC_CHANNELS_FUNCTION_THROTTLE=0
 uint8 RC_CHANNELS_FUNCTION_ROLL=1
 uint8 RC_CHANNELS_FUNCTION_PITCH=2
@@ -22,11 +22,12 @@ uint8 RC_CHANNELS_FUNCTION_RATTITUDE=19
 uint8 RC_CHANNELS_FUNCTION_KILLSWITCH=20
 uint8 RC_CHANNELS_FUNCTION_SPEED=21
 uint8 RC_CHANNELS_FUNCTION_TAKEOFF_LAND=22
+uint8 RC_CHANNELS_FUNCTION_MAG_DEC_C=23
 uint64 timestamp						# Timestamp in microseconds since boot time
 uint64 timestamp_last_valid					# Timestamp of last valid RC signal
 float32[18] channels						# Scaled to -1..1 (throttle: 0..1)
 uint8 channel_count						# Number of valid channels
-int8[23] function						# Functions mapping
+int8[24] function						# Functions mapping
 uint8 rssi							# Receive signal strength indicator (0-100)
 bool signal_lost						# Control signal lost, should be checked together with topic timeout
 uint32 frame_drop_count						# Number of dropped frames
