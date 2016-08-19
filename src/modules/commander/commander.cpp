@@ -266,8 +266,6 @@ void check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool
 
 transition_result_t set_main_state_rc(struct vehicle_status_s *status, bool landed);
 
-void set_horizon_speed();
-
 void set_control_mode();
 
 bool stabilization_required();
@@ -2469,9 +2467,6 @@ int commander_thread_main(int argc, char *argv[])
 				tune_negative(true);
 			}
             
-			/* set 3 position speed value according to speed switches */
-            set_horizon_speed();
-
 			/* evaluate the main state machine according to mode switches */
 			bool first_rc_eval = (_last_sp_man.timestamp == 0) && (sp_man.timestamp > 0);
 			transition_result_t main_res = set_main_state_rc(&status, land_detector.landed);
@@ -3357,36 +3352,6 @@ set_main_state_rc(struct vehicle_status_s *status_local, bool landed)
 	}
 	
 	return res;
-}
-
-void set_horizon_speed()
-{	
-	if (((_last_sp_man.timestamp != 0) && (_last_sp_man.timestamp == sp_man.timestamp)) ||
-		 (_last_sp_man.speed_switch == sp_man.speed_switch)) {
-        return;
-    }
-	
-    _last_sp_man.speed_switch = sp_man.speed_switch;
-	
-    param_t param = param_find_no_notification("MPC_XY_VEL_MAX");
-    float speedSetValue = 2.0;
-
-    /* check speed switch */
-	switch (sp_man.speed_switch) {
-	case manual_control_setpoint_s::SWITCH_POS_OFF:	// horizontal velocity 2m/s
-		param_set(param, &speedSetValue);
-		break;
-	case manual_control_setpoint_s::SWITCH_POS_MIDDLE:	// horizontal velocity 4m/s
-        speedSetValue = 4.0;
-		param_set(param, &speedSetValue);
-		break;
-	case manual_control_setpoint_s::SWITCH_POS_ON:	// horizontal velocity 6m/s
-        speedSetValue = 6.0;
-		param_set(param, &speedSetValue);
-		break;
-    default:
-        break;
-    }
 }
 
 void

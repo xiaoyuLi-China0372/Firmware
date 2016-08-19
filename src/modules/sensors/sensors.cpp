@@ -198,6 +198,11 @@ private:
 	void set_params_from_rc();
 
 	/**
+	 * set max horizonal speed "MPC_XY_VEL_MAX" to 2m/s, 4m/s, 6m/s depend on speed_sw.
+	 */
+    void set_horizon_speed(uint8_t speed_sw);
+
+	/**
 	 * Gather and publish RC input data.
 	 */
 	void		rc_poll();
@@ -1829,6 +1834,7 @@ Sensors::get_rc_sw2pos_position(uint8_t func, float on_th, bool on_inv)
 void
 Sensors::set_params_from_rc()
 {
+    uint8_t speed_switch = 0;	//max horizonal speed 3 position switch (mandatory): 2m/s, 4m/s, 6m/s
 	for (int i = 0; i < rc_parameter_map_s::RC_PARAM_MAP_NCHAN; i++) {
 		if (_rc.function[rc_channels_s::RC_CHANNELS_FUNCTION_PARAM_1 + i] < 0 || !_rc_parameter_map.valid[i]) {
 			/* This RC channel is not mapped to a RC-Parameter Channel (e.g. RC_MAP_PARAM1 == 0)
@@ -1849,6 +1855,40 @@ Sensors::set_params_from_rc()
 			param_set(_parameter_handles.rc_param[i], &param_val);
 		}
 	}
+	speed_switch = get_rc_sw3pos_position(rc_channels_s::RC_CHANNELS_FUNCTION_SPEED, _parameters.rc_speed_6_th,
+					     _parameters.rc_speed_6_inv, _parameters.rc_speed_4_th, _parameters.rc_speed_4_inv);
+	/* set 3 horizonal speed values according to speed switches */
+    set_horizon_speed(speed_switch);
+}
+
+void Sensors::set_horizon_speed(uint8_t speed_sw)
+{	
+    static uint8_t last_speed_sw = 0;
+    float speedSetValue = 2.0;
+    if (last_speed_sw == speed_sw) {
+        return;
+    }
+	
+    last_speed_sw = speed_sw;
+	
+    param_t param = param_find_no_notification("MPC_XY_VEL_MAX");
+
+    /* check speed switch */
+	switch (speed_sw) {
+	case manual_control_setpoint_s::SWITCH_POS_OFF:	// horizontal velocity 2m/s
+		param_set(param, &speedSetValue);
+		break;
+	case manual_control_setpoint_s::SWITCH_POS_MIDDLE:	// horizontal velocity 4m/s
+        speedSetValue = 4.0;
+		param_set(param, &speedSetValue);
+		break;
+	case manual_control_setpoint_s::SWITCH_POS_ON:	// horizontal velocity 6m/s
+        speedSetValue = 6.0;
+		param_set(param, &speedSetValue);
+		break;
+    default:
+        break;
+    }
 }
 
 void
@@ -2030,8 +2070,6 @@ Sensors::rc_poll()
 						 _parameters.rc_offboard_th, _parameters.rc_offboard_inv);
 			manual.kill_switch = get_rc_sw2pos_position(rc_channels_s::RC_CHANNELS_FUNCTION_KILLSWITCH,
 					     _parameters.rc_killswitch_th, _parameters.rc_killswitch_inv);
-			manual.speed_switch = get_rc_sw3pos_position(rc_channels_s::RC_CHANNELS_FUNCTION_SPEED, _parameters.rc_speed_6_th,
-					     _parameters.rc_speed_6_inv, _parameters.rc_speed_4_th, _parameters.rc_speed_4_inv);
 			manual.takeoff_land = get_rc_sw3pos_position(rc_channels_s::RC_CHANNELS_FUNCTION_TAKEOFF_LAND, _parameters.rc_land_th,
 					     _parameters.rc_land_inv, _parameters.rc_takeoff_th, _parameters.rc_takeoff_inv);
 
