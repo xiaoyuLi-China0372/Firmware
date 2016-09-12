@@ -104,6 +104,8 @@ private:
 	control::BlockParamFloat _param_v_load_drop;
 	control::BlockParamFloat _param_low_thr;
 	control::BlockParamFloat _param_crit_thr;
+	control::BlockParamFloat _param_volt_low;
+	control::BlockParamFloat _param_volt_crit;
 
 	float _voltage_filtered_v;
 	float _current_filtered_a;

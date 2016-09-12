@@ -50,6 +50,8 @@ Battery::Battery() :
 	_param_v_load_drop(this, "V_LOAD_DROP"),
 	_param_low_thr(this, "LOW_THR"),
 	_param_crit_thr(this, "CRIT_THR"),
+	_param_volt_low(this, "VOLT_LOW"),
+	_param_volt_crit(this, "VOLT_CRIT"),
 	_voltage_filtered_v(-1.0f),
 	_discharged_mah(0.0f),
 	_remaining_voltage(1.0f),
@@ -204,11 +206,21 @@ Battery::estimateRemaining(float voltage_v, float throttle_normalized, bool arme
 void
 Battery::determineWarning()
 {
-	// Smallest values must come first
-	if (_remaining < _param_crit_thr.get()) {
-		_warning = battery_status_s::BATTERY_WARNING_CRITICAL;
-
-	} else if (_remaining < _param_low_thr.get()) {
-		_warning = battery_status_s::BATTERY_WARNING_LOW;
-	}
+    float volt_crit = _param_volt_crit.get();
+    float volt_low = _param_volt_low.get();
+    if(volt_crit > 0.0f && volt_low > volt_crit) {
+        // Smallest values must come first
+        if (_voltage_filtered_v < volt_crit) {
+            _warning = battery_status_s::BATTERY_WARNING_CRITICAL;
+        } else if (_voltage_filtered_v < volt_low) {
+            _warning = battery_status_s::BATTERY_WARNING_LOW;
+        }
+    } else {
+        // Smallest values must come first
+        if (_remaining < _param_crit_thr.get()) {
+            _warning = battery_status_s::BATTERY_WARNING_CRITICAL;
+        } else if (_remaining < _param_low_thr.get()) {
+            _warning = battery_status_s::BATTERY_WARNING_LOW;
+        }
+    }
 }

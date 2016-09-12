@@ -102,6 +102,38 @@ PARAM_DEFINE_FLOAT(BAT_LOW_THR, 0.15f);
 PARAM_DEFINE_FLOAT(BAT_CRIT_THR, 0.07f);
 
 /**
+ * Battery voltage low threshold
+ *
+ * Sets the threshold when the battery voltage will be reported as low.
+ * This has to be higher than the critical threshold.
+ *
+ * @group Battery Calibration
+ * @unit norm
+ * @decimal 2
+ * @min -1.0
+ * @max 100.0
+ * @increment 0.01
+ */
+PARAM_DEFINE_FLOAT(BAT_VOLT_LOW, -1.0f);
+
+/**
+ * Battery voltage critical threshold
+ *
+ * Sets the threshold when the battery voltage will be reported as critically low.
+ * This has to be lower than the low threshold. This threshold commonly
+ * will trigger RTL or landing.
+ *
+ * @group Battery Calibration
+ * @unit norm
+ * @decimal 2
+ * @min -1.0
+ * @max 100.0
+ * @increment 0.01
+ */
+PARAM_DEFINE_FLOAT(BAT_VOLT_CRIT, -1.0f);
+
+
+/**
  * Voltage drop per cell on full throttle
  *
  * This implicitely defines the internal resistance
