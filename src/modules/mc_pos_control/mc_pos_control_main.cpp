@@ -93,6 +93,7 @@
 #define MIN_DIST		0.01f
 #define MANUAL_THROTTLE_MAX_MULTICOPTER	0.9f
 #define ONE_G	9.8066f
+#define POS_HOLD_DELAY 3000000
 
 /**
  * Multicopter position control app start / stop handling function
@@ -315,7 +316,7 @@ private:
 	/**
 	 * Set position setpoint using manual control
 	 */
-	void		control_manual(float dt);
+	bool		control_manual(float dt);
 
 	/**
 	 * Set position setpoint using offboard control
@@ -791,15 +792,27 @@ MulticopterPositionControl::limit_pos_sp_offset()
 	}
 }
 
-void
+bool
 MulticopterPositionControl::control_manual(float dt)
 {
+	bool reset_int = false;
+	static bool was_landed = true;
+	static hrt_abstime pos_hold_t = 0;
 	math::Vector<3> req_vel_sp; // X,Y in local frame and Z in global (D), in [-1,1] normalized range
 	req_vel_sp.zero();
 
 	if (_control_mode.flag_control_altitude_enabled) {
 		/* set vertical velocity setpoint with throttle stick */
 		req_vel_sp(2) = -scale_control(_manual.z - 0.5f, 0.5f, _params.alt_ctl_dz, _params.alt_ctl_dy); // D
+        //don't need position hold and integral from takeoff or land
+        if (was_landed != _vehicle_land_detected.landed) {
+            pos_hold_t = hrt_absolute_time();
+            was_landed = _vehicle_land_detected.landed;
+        }
+        if ((pos_hold_t + POS_HOLD_DELAY) > hrt_absolute_time() || _manual.z < 0.1f) {
+            _reset_pos_sp = true;
+            reset_int = true;
+        }
 	}
 
 	if (_control_mode.flag_control_position_enabled) {
@@ -888,6 +901,7 @@ MulticopterPositionControl::control_manual(float dt)
 			_pos_sp(2) = _pos(2);
 		}
 	}
+	return reset_int;
 }
 
 void
@@ -1336,7 +1350,11 @@ MulticopterPositionControl::task_main()
 			/* select control source */
 			if (_control_mode.flag_control_manual_enabled) {
 				/* manual control */
-				control_manual(dt);
+				if (control_manual(dt)) {
+			        reset_int_xy = true;
+			        reset_int_z = true;
+			        reset_yaw_sp = true;
+                }
 				_mode_auto = false;
 
 			} else if (_control_mode.flag_control_offboard_enabled) {
@@ -1747,8 +1765,10 @@ MulticopterPositionControl::task_main()
 						}
 					}
 
-					if (_control_mode.flag_control_altitude_enabled) {
+					if (_control_mode.flag_control_altitude_enabled &&
+                        !(_control_mode.flag_control_manual_enabled && _manual.z < 0.1f)) {
 						/* thrust compensation for altitude only control modes */
+			            //cancel compensation when landed in not AUTO mode 
 						float att_comp;
 
 						if (_R(2, 2) > TILT_COS_MAX) {
