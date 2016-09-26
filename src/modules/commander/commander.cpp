@@ -1165,6 +1165,7 @@ int commander_thread_main(int argc, char *argv[])
 	bool was_armed = false;
 
 	bool startup_in_hil = false;
+	bool auto_disarm_enable = false; //the flag indicate enable auto disarm when the vehicle state from inair to land
 
 	// XXX for now just set sensors as initialized
 	status_flags.condition_system_sensors_initialized = true;
@@ -1953,12 +1954,12 @@ int commander_thread_main(int argc, char *argv[])
 		if (updated) {
 			/* position changed */
 			orb_copy(ORB_ID(vehicle_attitude), attitude_sub, &attitude);
-            /* disarm when titl > 45 deg on POSCTL and land*/
-            //if (attitude.R[8] < TILT_COS_MAX &&
-            //    (internal_state.main_state == commander_state_s::MAIN_STATE_POSCTL ||
-            //     internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND)) {
-            //    arm_disarm(false, &mavlink_log_pub, "tilt > 45 deg");
-            //}
+            /* disarm when titl > 45 deg on land*/
+            if (attitude.R[8] < TILT_COS_MAX &&
+                (internal_state.main_state == commander_state_s::MAIN_STATE_POSCTL ||
+                 internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND)) {
+                arm_disarm(false, &mavlink_log_pub, "tilt > 45 deg");
+            }
 		}
 
 		//update condition_global_position_valid
@@ -2015,8 +2016,15 @@ int commander_thread_main(int argc, char *argv[])
 
 			if (was_landed != land_detector.landed) {
 				if (land_detector.landed) {
+					// Check for auto-disarm
+					if (disarm_when_landed > 0) {
+						auto_disarm_enable = true;
+						auto_disarm_hysteresis.set_state_and_update(true);
+					}
 					mavlink_and_console_log_info(&mavlink_log_pub, "Landing detected");
 				} else {
+					auto_disarm_enable = false;
+					auto_disarm_hysteresis.set_state_and_update(false);
 					mavlink_and_console_log_info(&mavlink_log_pub, "Takeoff detected");
 				}
 			}
@@ -2027,20 +2035,17 @@ int commander_thread_main(int argc, char *argv[])
 				}
 			}
 
-
-			was_landed = land_detector.landed;
 			was_falling = land_detector.freefall;
 		}
 
-		// Check for auto-disarm
-		if (armed.armed && land_detector.landed && disarm_when_landed > 0) {
-			auto_disarm_hysteresis.set_state_and_update(true);
-		} else {
-			auto_disarm_hysteresis.set_state_and_update(false);
+		if (auto_disarm_enable && land_detector.landed) {
+			auto_disarm_hysteresis.update();
 		}
 
 		if (auto_disarm_hysteresis.get_state()) {
 			arm_disarm(false, &mavlink_log_pub, "auto disarm on land");
+			auto_disarm_enable = false;
+			auto_disarm_hysteresis.set_state_and_update(false);
 		}
 
 		if (!rtl_on) {
@@ -2741,6 +2746,7 @@ int commander_thread_main(int argc, char *argv[])
 		}
 
 		was_armed = armed.armed;
+		was_landed = land_detector.landed;
 
 		/* print new state */
 		if (arming_state_changed) {
