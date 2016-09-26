@@ -811,6 +811,13 @@ MulticopterPositionControl::control_manual(float dt)
 	if (_control_mode.flag_control_altitude_enabled) {
 		/* set vertical velocity setpoint with throttle stick */
 		req_vel_sp(2) = -scale_control(_manual.z - 0.5f, 0.5f, _params.alt_ctl_dz, _params.alt_ctl_dy); // D
+	}
+
+	if (_control_mode.flag_control_position_enabled) {
+		/* set horizontal velocity setpoint with roll/pitch stick */
+		req_vel_sp(0) = _manual.x;
+		req_vel_sp(1) = _manual.y;
+        
         //don't need position hold and integral from takeoff or land
         if (was_landed != _vehicle_land_detected.landed) {
             pos_hold_t = hrt_absolute_time();
@@ -820,12 +827,6 @@ MulticopterPositionControl::control_manual(float dt)
             _reset_pos_sp = true;
             reset_int = true;
         }
-	}
-
-	if (_control_mode.flag_control_position_enabled) {
-		/* set horizontal velocity setpoint with roll/pitch stick */
-		req_vel_sp(0) = _manual.x;
-		req_vel_sp(1) = _manual.y;
 	}
 
 	if (_control_mode.flag_control_altitude_enabled) {
@@ -1362,7 +1363,6 @@ MulticopterPositionControl::task_main()
 				/* manual control */
 				if (control_manual(dt)) {
 			        reset_int_xy = true;
-			        reset_int_z = true;
 			        reset_yaw_sp = true;
                 }
 				_mode_auto = false;
