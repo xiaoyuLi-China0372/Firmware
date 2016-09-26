@@ -108,15 +108,15 @@ GpsFailure::on_active()
 		_navigator->publish_att_sp();
 
 		/* Measure time */
-		hrt_abstime elapsed = hrt_elapsed_time(&_timestamp_activation);
+		//hrt_abstime elapsed = hrt_elapsed_time(&_timestamp_activation);
 
 		//warnx("open loop loiter, posctl enabled %u, elapsed %.1fs, thrust %.2f",
 				//_navigator->get_control_mode()->flag_control_position_enabled, elapsed * 1e-6, (double)_param_openlooploiter_thrust.get());
-		if (elapsed > _param_loitertime.get() * 1e6f) {
-			/* no recovery, adavance the state machine */
-			warnx("gps not recovered, switch to next state");
-			advance_gpsf();
-		}
+		//if (elapsed > _param_loitertime.get() * 1e6f) {
+		//	/* no recovery, adavance the state machine */
+		//	warnx("gps not recovered, switch to next state");
+		//	advance_gpsf();
+		//}
 		break;
 	}
 	case GPSF_STATE_TERMINATE:
