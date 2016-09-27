@@ -1955,11 +1955,11 @@ int commander_thread_main(int argc, char *argv[])
 			/* position changed */
 			orb_copy(ORB_ID(vehicle_attitude), attitude_sub, &attitude);
             /* disarm when titl > 45 deg on land*/
-            if (attitude.R[8] < TILT_COS_MAX &&
-                (internal_state.main_state == commander_state_s::MAIN_STATE_POSCTL ||
-                 internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND)) {
-                arm_disarm(false, &mavlink_log_pub, "tilt > 45 deg");
-            }
+            //if (attitude.R[8] < TILT_COS_MAX &&
+            //    (internal_state.main_state == commander_state_s::MAIN_STATE_POSCTL ||
+            //     internal_state.main_state == commander_state_s::MAIN_STATE_AUTO_LAND)) {
+            //    arm_disarm(false, &mavlink_log_pub, "tilt > 45 deg");
+            //}
 		}
 
 		//update condition_global_position_valid
