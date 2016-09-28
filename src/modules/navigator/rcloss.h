@@ -66,6 +66,7 @@ public:
 private:
 	/* Params */
 	control::BlockParamFloat _param_loitertime;
+	control::BlockParamFloat _param_climbAlt;
 
 	enum RCLState {
 		RCL_STATE_NONE = 0,

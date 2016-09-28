@@ -56,3 +56,14 @@
  * @group Radio Signal Loss
  */
 PARAM_DEFINE_FLOAT(NAV_RCL_LT, 120.0f);
+
+/**
+ * Set climb altitude to loiter after RC loss
+ *
+ * @unit m
+ * @min 0.2
+ * @max 100.0
+ * @decimal 1
+ * @group Mission
+ */
+PARAM_DEFINE_FLOAT(NAV_RCL_CLM, 1);

@@ -128,10 +128,11 @@ PARAM_DEFINE_INT32(NAV_DLL_ACT, 0);
  * @value 1 Loiter
  * @value 2 Return to Land
  * @value 3 Land at current position
+ * @value 4 RC loss
  *
  * @group Mission
  */
-PARAM_DEFINE_INT32(NAV_RCL_ACT, 2);
+PARAM_DEFINE_INT32(NAV_RCL_ACT, 4);
 
 /**
  * Airfield home Lat
