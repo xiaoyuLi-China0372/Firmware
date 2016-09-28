@@ -768,7 +768,7 @@ bool set_nav_state(struct vehicle_status_s *status, struct commander_state_s *in
 			/* finished handling commands which have priority, now handle failures */
 
 		} else if (status_flags->gps_failure) {
-			status->nav_state = vehicle_status_s::NAVIGATION_STATE_DESCEND;
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LANDGPSFAIL;
 			status->failsafe = true;
 
 		} else if (status->engine_failure) {
@@ -834,7 +834,7 @@ bool set_nav_state(struct vehicle_status_s *status, struct commander_state_s *in
 			status->nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LANDENGFAIL;
 
 		} else if (status_flags->gps_failure) {
-			status->nav_state = vehicle_status_s::NAVIGATION_STATE_DESCEND;
+			status->nav_state = vehicle_status_s::NAVIGATION_STATE_AUTO_LANDGPSFAIL;
 			status->failsafe = true;
 
 			/* also go into failsafe if just datalink is lost */
