@@ -94,6 +94,22 @@ Takeoff::on_active()
 		mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
 		_navigator->set_position_setpoint_triplet_updated();
 	}
+
+    if (_navigator->get_mission_result()->finished) {
+        static hrt_abstime update_t = hrt_absolute_time();
+        static float loiter_alt = _param_min_alt.get();
+        //check update very 1 second
+        if (hrt_elapsed_time(&update_t) > 1e6) {
+            updateParams();
+            update_t = hrt_absolute_time();
+            if (_param_min_alt.get() > loiter_alt + FLT_EPSILON || _param_min_alt.get() < loiter_alt - FLT_EPSILON) {
+                struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
+                pos_sp_triplet->current.alt += _param_min_alt.get() - loiter_alt;
+                _navigator->set_position_setpoint_triplet_updated();
+                loiter_alt = _param_min_alt.get();
+            }
+        }
+    }
 }
 
 void
