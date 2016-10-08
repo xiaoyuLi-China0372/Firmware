@@ -55,10 +55,12 @@
 
 Takeoff::Takeoff(Navigator *navigator, const char *name) :
 	MissionBlock(navigator, name),
+	_param_update_sub(-1),
 	_param_min_alt(this, "MIS_TAKEOFF_ALT", false)
 {
 	// load initial params
 	updateParams();
+	_param_update_sub = orb_subscribe(ORB_ID(parameter_update));
 }
 
 Takeoff::~Takeoff()
@@ -93,15 +95,13 @@ Takeoff::on_active()
 		struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
 		mission_item_to_position_setpoint(&_mission_item, &pos_sp_triplet->current);
 		_navigator->set_position_setpoint_triplet_updated();
-	}
-
-    if (_navigator->get_mission_result()->finished) {
-        static hrt_abstime update_t = hrt_absolute_time();
+	} else if (_navigator->get_mission_result()->finished) {
+        bool updated = false;
         static float loiter_alt = _param_min_alt.get();
-        //check update very 1 second
-        if (hrt_elapsed_time(&update_t) > 1e6) {
+        /* parameters updated */
+        orb_check(_param_update_sub, &updated);
+        if (updated) {
             updateParams();
-            update_t = hrt_absolute_time();
             if (_param_min_alt.get() > loiter_alt + FLT_EPSILON || _param_min_alt.get() < loiter_alt - FLT_EPSILON) {
                 struct position_setpoint_triplet_s *pos_sp_triplet = _navigator->get_position_setpoint_triplet();
                 pos_sp_triplet->current.alt += _param_min_alt.get() - loiter_alt;

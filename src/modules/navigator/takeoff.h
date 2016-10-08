@@ -61,6 +61,7 @@ public:
 	virtual void on_active();
 
 private:
+	int _param_update_sub;		/**< param update subscription */
 	control::BlockParamFloat _param_min_alt;
 
 	void set_takeoff_position();
